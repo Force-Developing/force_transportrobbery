@@ -1,28 +1,83 @@
-Config = {
+Config = {}
 
-    PedHash = 'csb_ortega',
+-- Prints extra info to the F8 / server console. Setup errors are always printed.
+Config.Debug = false
 
-    PedPos = vector3(557.13684082031, -2961.3857421875, 6.045211315155 - 0.985),
-    PedPosH = 360.0,
+-- "en", "sv" or "auto" (follows the replicated ox:locale convar: setr ox:locale "sv")
+Config.Locale = "en"
 
-    MainPoint = { 
-        { x = 1616.6563720703, y = 1201.5794677734, z = 85.064308166504, blip = MainPoint, hasSpawned = false },
+-- "auto" (detected by the server: qbx_core, es_extended, qb-core), "esx", "qb", "qbx" or "custom"
+Config.Framework = "auto"
+
+-- "auto" (ox_target, then qb-target, else [E] + text UI), "ox_target", "qb-target" or "none" ([E] + text UI).
+-- Used for the boss. The starting point and the truck always use [E].
+Config.Target = "auto"
+
+-- How close (meters) the player has to stand to the boss. The server allows a small margin on top.
+Config.InteractDistance = 2.0
+
+-- The man who hands out the robbery
+Config.Boss = {
+    name = "Berto",
+    model = "csb_ortega",
+    coords = vec4(557.14, -2961.39, 5.06, 0.0),
+    anim = { dict = "mini@strip_club@idles@bouncer@base", clip = "base" }, -- false for none
+    blip = false, -- { sprite = 500, colour = 1, scale = 0.7 } to show him on the map
+}
+
+-- Police online needed to start a robbery, and the alarm they get when the doors are cut open
+Config.Police = {
+    jobs = { "police", "sheriff" },
+    minimum = 1,       -- 0 = no requirement
+    onlyOnDuty = true, -- QBCore / QBox duty, ESX job.onDuty where your ESX version has it
+    alert = true,      -- false: no built-in alarm (hook your dispatch on the server event force_transportrobbery:policeAlert)
+    blip = { sprite = 161, colour = 3, scale = 2.0, duration = 300 }, -- duration in seconds
+}
+
+-- Minutes before anyone can start a new robbery once a robbery where the police were alerted has ended. 0 = none.
+Config.Cooldown = 30
+
+-- Minutes a robbery may take. After that it is called off and the truck and guards are removed.
+Config.MaxDuration = 30
+
+-- Draw what to do next at the bottom of the screen during a robbery
+Config.ShowHints = true
+
+-- Where the player waits for the truck. Leaving the radius before the truck shows up fails the robbery.
+Config.Ambush = {
+    coords = vec3(1616.66, 1201.58, 85.06),
+    radius = 20.0,
+    wait = 30, -- seconds
+}
+
+-- The cash-in-transit truck. It spawns at coords and its driver takes it to destination.
+Config.Truck = {
+    model = "stockade",
+    coords = vec4(1746.47, 1936.50, 72.22, 170.0),
+    destination = vec3(697.09, 606.43, 128.91),
+    arriveRadius = 10.0, -- the truck counts as arrived this close to the destination
+    speed = 30.0,        -- driving speed (m/s)
+    drivingStyle = 787391,
+    -- seat -1 = driver, 0 = front passenger. They get out and fight once the truck has arrived.
+    guards = {
+        { model = "cs_siemonyetarian", seat = -1 },
+        { model = "cs_solomon", seat = 0 },
     },
+    weapon = "WEAPON_SMG",
+    armour = 100,
+}
 
-    MainCarPoint = {
-        { vehicleHash = 'Stockade', x = 1746.4700927734, y = 1936.5030517578, z = 72.221473693848, h = 170.0, vehicleName = MainCar, blipHasSpawned = false, blipName = mainVehicle, hasSpawned = false},
-    },
+-- The robbery at the destination
+Config.Robbery = {
+    distance = 5.0, -- how close to the truck the player has to stand
+    cutTime = 60,   -- seconds to cut open the back doors (the police are alerted when it starts)
+    lootTime = 60,  -- seconds to take the money
+}
 
-    VehiclePedHash = 'cs_solomon',
-    VehiclePedPos = vector4(2091.1296386719, 2688.9912109375, 50.664794921875, 130.0),
-    VehiclePedHash2 = 'cs_siemonyetarian',
-    VehiclePedPos2 = vector4(2096.1062011719, 2684.4094238281, 50.667224884033, 130.0),
-
-    VehicleDestination = vector3(697.08825683594, 606.43151855469, 128.9111328125),
-
-    MoneyReward = 100000,
-    MoneyRewardMin = 150000,
-
-    RequiredCopsRob = 1,
-
-};
+-- Paid by the server once the money is taken, a random amount between min and max.
+-- account = "cash", "bank" or "dirty" (ESX black_money; QBox / ox_inventory black_money item; QBCore markedbills)
+Config.Reward = {
+    min = 100000,
+    max = 150000,
+    account = "cash",
+}

@@ -1,15 +1,36 @@
 fx_version 'cerulean'
-games { 'gta5' }
+lua54 'yes'
+game 'gta5'
 
-author 'Force#3883'
-description ''
+name 'force_transportrobbery'
+author 'Force Developments <discord:@force3883>'
+description 'Cash-in-transit robbery: follow the armoured truck, deal with the guards, cut the doors and take the money. ESX, QBCore and QBox.'
+version '2.0.0'
 
-client_scripts {
-    'config.lua',
-    'client/*'
+dependencies {
+    '/onesync',
+    'ox_lib',
 }
 
-server_scripts {	
+shared_scripts {
+    '@ox_lib/init.lua',
     'config.lua',
-	'server/*'
+    'shared/functions.lua',
+}
+
+server_scripts {
+    'version.lua',
+    'server/custom/frameworks/*.lua',
+    'server/custom/inventory.lua',
+    'server/main.lua',
+}
+
+client_scripts {
+    'client/custom/frameworks/*.lua',
+    'client/interact.lua',
+    'client/main.lua',
+}
+
+files {
+    'locales/*.json',
 }
