@@ -165,7 +165,8 @@ lib.callback.register(RESOURCE .. ":server:wait", function(source)
   return true, ambush.wait
 end)
 
---- An entity the player's client created and owns, by net id (nil when it isn't one)
+--- An entity the player's client owns, by net id (nil when it isn't one). The server can't see which client created
+--- an entity, only its current owner; the callers also check the model and the position.
 --- @param entityType number 1 = ped, 2 = vehicle
 local function ownedEntity(source, netId, entityType)
   netId = math.tointeger(tonumber(netId))
@@ -207,13 +208,23 @@ lib.callback.register(RESOURCE .. ":server:spawned", function(source, truckNet, 
 
   local truckCoords = GetEntityCoords(truck)
   local seen = {}
+  -- each configured guard can be matched once, by its model
+  local open = {}
+  for index, guard in ipairs(def.guards) do open[index] = joaat(guard.model) end
   for index, netId in ipairs(type(guardNets) == "table" and guardNets or {}) do
     if index > #def.guards then break end
     local ped = ownedEntity(source, netId, 1)
     if run ~= current then return false, "no_run" end
     if ped and not seen[ped] and not IsPedAPlayer(ped) and #(GetEntityCoords(ped) - truckCoords) <= GUARD_RADIUS then
-      seen[ped] = true
-      current.guards[#current.guards + 1] = ped
+      local model = GetEntityModel(ped)
+      for slot, hash in pairs(open) do
+        if sameHash(model, hash) then
+          open[slot] = nil
+          seen[ped] = true
+          current.guards[#current.guards + 1] = ped
+          break
+        end
+      end
     end
   end
 
