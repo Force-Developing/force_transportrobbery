@@ -11,7 +11,7 @@ Free and open source. Works on ESX Legacy, QBCore and QBox.
 - The reward (a random amount between a min and a max) is paid once by the server
 - Payout as cash, bank or dirty money (ESX black_money, QBox / ox_inventory black_money item, QBCore markedbills)
 - Police alarm with a map blip for the police on duty, and a server event for your dispatch resource
-- Fails cleanly when the player leaves the ambush, dies or loses the truck; cancel at Berto, a maximum duration, and cleanup when the player leaves or the resource restarts
+- Fails cleanly when the player leaves the ambush, dies, loses the truck or logs out; cancel at Berto, a maximum duration, and cleanup when the player leaves or the resource restarts
 - ox_target, qb-target or [E] with the ox_lib text UI
 - English and Swedish locales
 
@@ -31,6 +31,10 @@ No database is used.
 1. Put the folder in your resources as `force_transportrobbery`.
 2. Add `ensure force_transportrobbery` to `server.cfg` below `ensure ox_lib`. The order relative to your framework and target resource doesn't matter.
 3. Edit `config.lua`: reward and payout account, police minimum, cooldown and the locations.
+
+## Updating from 1.x
+
+A `config.lua` kept from 1.x still works (its locations, models, reward and police minimum are used), but the new options need the 2.0 `config.lua`. The old events, including the reward event any client could call, are gone. See the [documentation](https://docs.forcedevelopments.com/free-resources/force_transportrobbery/introduction#updating-from-1.x).
 
 ## Documentation
 
