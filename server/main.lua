@@ -131,7 +131,12 @@ lib.callback.register(RESOURCE .. ":server:start", function(source)
   if Config.Police.minimum > 0 then
     local police = policeOnline()
     if not police then return false, "not_ready" end
-    if #police < Config.Police.minimum then return false, "not_enough_police" end
+    -- the robber doesn't count, even with a police job
+    local others = 0
+    for _, id in ipairs(police) do
+      if tonumber(id) ~= tonumber(source) then others = others + 1 end
+    end
+    if others < Config.Police.minimum then return false, "not_enough_police" end
   end
 
   local now = GetGameTimer()
