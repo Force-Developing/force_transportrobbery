@@ -10,12 +10,17 @@ local SPAWN_RADIUS = 30.0
 local GUARD_RADIUS = 15.0
 -- The truck may not cover the straight line from its spawn to the destination faster than this times its speed
 local DRIVE_SPEED_FACTOR = 1.5
+-- How long after the wait at the ambush is over the client may take to spawn and report the truck
+local SPAWN_GRACE_MS = 120000
 
 -- The one robbery that can run at a time (a single truck on a single route):
--- { source, identifier, stage, startedAt, deadline, waitStarted, spawnedAt, truck, guards, begun, alerted, finishing }
+-- { source, identifier, player, stage, startedAt, deadline, stageDeadline, waitStarted, spawnedAt, truck, guards, begun,
+--   alerted, finishing }
 -- stage: "meet" (go to the ambush) -> "waiting" -> "follow" (truck out) -> "open" (doors cut) -> paid
 local run = nil
 local cooldownUntil = 0
+-- [license] = game timer: the player whose robbery failed, was called off or timed out can't start again before
+local playerCooldowns = {}
 local policeJobs = {}
 
 local function prepareConfig()
@@ -38,6 +43,10 @@ end
 
 local function cooldownMs()
   return math.max(0, tonumber(Config.Cooldown) or 0) * 60000
+end
+
+local function cancelCooldownMs()
+  return math.max(0, tonumber(Config.CancelCooldown) or 10) * 60000
 end
 
 --- Shortest time the truck needs from its spawn to the destination
@@ -97,6 +106,10 @@ local function endRun(current, why, keepEntities)
   if not current or run ~= current then return end
   run = nil
   if current.alerted and cooldownMs() > 0 then cooldownUntil = GetGameTimer() + cooldownMs() end
+  -- every end without the payout (failed, called off, timed out, logout, left the server) except a resource stop
+  if why ~= "paid" and why ~= "resource stopped" and cancelCooldownMs() > 0 then
+    playerCooldowns[current.player] = GetGameTimer() + cancelCooldownMs()
+  end
   if not keepEntities then
     deleteEntity(current.truck)
     for _, ped in ipairs(current.guards) do deleteEntity(ped) end
@@ -104,18 +117,34 @@ local function endRun(current, why, keepEntities)
   Debug("info", "Robbery of %s ended: %s", tostring(GetPlayerName(current.source)), why)
 end
 
---- Ends a robbery that ran past Config.MaxDuration and tells the client. Returns true when it did.
+--- Ends a robbery that ran past Config.MaxDuration or the time limit of its stage (getting to the ambush, the truck
+--- after the wait) and tells the client. Returns true when it did.
 local function expire()
   local current = run
-  if not current or current.finishing or GetGameTimer() <= current.deadline then return false end
-  endRun(current, "max duration")
+  if not current or current.finishing then return false end
+  local now = GetGameTimer()
+  local why
+  if now > current.deadline then why = "max duration"
+  elseif current.stageDeadline and now > current.stageDeadline then why = "stage " .. current.stage .. " took too long"
+  else return false end
+  endRun(current, why)
   TriggerClientEvent(RESOURCE .. ":client:ended", current.source, "expired")
   return true
 end
 
---- Milliseconds left of the cooldown
-local function cooldownLeft()
-  return math.max(0, cooldownUntil - GetGameTimer())
+--- The key of a player's cooldown: the license, so switching character or reconnecting doesn't reset it
+local function playerKey(source, identifier)
+  local license = GetPlayerIdentifierByType(source, "license")
+  return type(license) == "string" and license ~= "" and license or identifier
+end
+
+--- Milliseconds left of the server-wide cooldown and of this player's own one
+local function cooldownLeft(key)
+  local now = GetGameTimer()
+  for k, untilTime in pairs(playerCooldowns) do
+    if untilTime <= now then playerCooldowns[k] = nil end
+  end
+  return math.max(0, cooldownUntil - now, (playerCooldowns[key] or 0) - now)
 end
 
 lib.callback.register(RESOURCE .. ":server:start", function(source)
@@ -126,7 +155,8 @@ lib.callback.register(RESOURCE .. ":server:start", function(source)
   if runOf(source) then return false, "busy" end
   if not isNear(source, Robbery.boss.position, GetInteractDistance()) then return false, "too_far" end
   if run then return false, "boss_busy" end
-  local left = cooldownLeft()
+  local key = playerKey(source, identifier)
+  local left = cooldownLeft(key)
   if left > 0 then return false, "cooldown", math.ceil(left / 60000) end
   if Config.Police.minimum > 0 then
     local police = policeOnline()
@@ -143,9 +173,11 @@ lib.callback.register(RESOURCE .. ":server:start", function(source)
   run = {
     source = source,
     identifier = identifier,
+    player = key,
     stage = "meet",
     startedAt = now,
     deadline = now + maxDurationMs(),
+    stageDeadline = now + Robbery.ambush.reachTime,
     guards = {},
   }
   Debug("info", "%s started a robbery", tostring(GetPlayerName(source)))
@@ -162,6 +194,7 @@ lib.callback.register(RESOURCE .. ":server:wait", function(source)
   if not isNear(source, ambush.coords, ambush.radius) then return false, "too_far" end
   current.stage = "waiting"
   current.waitStarted = GetGameTimer()
+  current.stageDeadline = current.waitStarted + ambush.wait + SPAWN_GRACE_MS
   return true, ambush.wait
 end)
 
@@ -230,6 +263,7 @@ lib.callback.register(RESOURCE .. ":server:spawned", function(source, truckNet, 
 
   current.stage = "follow"
   current.spawnedAt = GetGameTimer()
+  current.stageDeadline = nil
   return true
 end)
 

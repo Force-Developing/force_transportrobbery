@@ -11,7 +11,7 @@ Free and open source. Works on ESX Legacy, QBCore and QBox.
 - The reward (a random amount between a min and a max) is paid once by the server
 - Payout as cash, bank or dirty money (ESX black_money, QBox / ox_inventory black_money item, QBCore markedbills)
 - Police alarm with a map blip for the police on duty, and a server event for your dispatch resource
-- Fails cleanly when the player leaves the ambush, dies, loses the truck or logs out; cancel at Berto, a maximum duration, and cleanup when the player leaves or the resource restarts
+- Fails cleanly when the player leaves the ambush, dies, loses the truck or logs out; cancel at Berto, a time limit to reach the ambush, a maximum duration, a personal cooldown after a failed or cancelled robbery, and cleanup when the player leaves or the resource restarts
 - ox_target, qb-target or [E] with the ox_lib text UI
 - English and Swedish locales
 

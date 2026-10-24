@@ -37,6 +37,10 @@ Config.Police = {
 -- Minutes before anyone can start a new robbery once a robbery where the police were alerted has ended. 0 = none.
 Config.Cooldown = 30
 
+-- Minutes before the same player can take a new job from the boss after their robbery failed, was called off or ran
+-- out of time (a robbery is held for one player at a time, so this keeps one player from holding it forever). 0 = none.
+Config.CancelCooldown = 10
+
 -- Minutes a robbery may take. After that it is called off and the truck and guards are removed.
 Config.MaxDuration = 30
 
@@ -48,6 +52,7 @@ Config.Ambush = {
     coords = vec3(1616.66, 1201.58, 85.06),
     radius = 20.0,
     wait = 30, -- seconds
+    reachTime = 10, -- minutes to get here and press [E] after the boss gave the job, otherwise the robbery is off
 }
 
 -- The cash-in-transit truck. It spawns at coords and its driver takes it to destination.

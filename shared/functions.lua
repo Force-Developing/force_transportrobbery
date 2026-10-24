@@ -106,6 +106,7 @@ local function PrepareAmbush()
     coords = toVector3(ambush.coords),
     radius = positive(ambush.radius, 20.0, 2.0),
     wait = wholeNumber(ambush.wait, 30, 0) * 1000,
+    reachTime = math.floor(positive(ambush.reachTime, 10.0, 1.0) * 60000),
   }
 end
 
