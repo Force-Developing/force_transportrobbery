@@ -335,11 +335,20 @@ AddEventHandler("onResourceStop", function(resource)
   endRun(run, "resource stopped")
 end)
 
--- Ends a robbery that ran past Config.MaxDuration
+--- Ends the robbery when its player logged out or switched character (multichar) without leaving the server:
+--- otherwise the robbery would block everyone else until Config.MaxDuration.
+local function checkCharacter()
+  local current = run
+  if not current or current.finishing or identifierOf(current.source) == current.identifier then return end
+  endRun(current, "character changed")
+  TriggerClientEvent(RESOURCE .. ":client:ended", current.source, "character")
+end
+
+-- Ends a robbery that ran past Config.MaxDuration or whose character is gone
 CreateThread(function()
   while true do
     Wait(5000)
-    expire()
+    if not expire() then checkCharacter() end
   end
 end)
 

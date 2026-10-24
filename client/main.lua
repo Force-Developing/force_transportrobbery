@@ -610,11 +610,11 @@ end
 -- Server events
 -------------------------------------------------------------------------------------------------------------------
 
--- The server ended the robbery (Config.MaxDuration)
+-- The server ended the robbery (Config.MaxDuration, or the character logged out)
 RegisterNetEvent(RESOURCE .. ":client:ended", function(reason)
   if not robbery then return end
   endRobbery(false)
-  if reason == "expired" then notify(locale("expired"), "error") end
+  notify(locale(reason == "expired" and "expired" or "cancelled"), "error")
 end)
 
 -- Police alarm: only sent by the server to the police on duty
