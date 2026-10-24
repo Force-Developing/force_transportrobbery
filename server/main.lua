@@ -443,7 +443,8 @@ local function checkBegun()
   Debug("info", "%s left the truck during the %s", tostring(GetPlayerName(current.source)), current.stage == "open" and "loot" or "cut")
 end
 
--- Ends a robbery that ran past Config.MaxDuration or whose character is gone
+-- Every 5 s: ends a robbery that ran past its time limits, whose character is gone or whose truck was teleported, and
+-- stops a cut or loot the player walked away from
 CreateThread(function()
   while true do
     Wait(5000)
