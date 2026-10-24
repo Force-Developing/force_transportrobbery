@@ -101,6 +101,18 @@ local function playerCoords()
   return GetEntityCoords(PlayerPedId())
 end
 
+--- Asks for control of a networked entity: ownership moves to whichever player is closest, and tasks or doors set
+--- by a client that doesn't own the entity are ignored. Returns true once this client has control.
+local function requestControl(entity, timeout)
+  if NetworkHasControlOfEntity(entity) then return true end
+  local deadline = GetGameTimer() + (timeout or 1000)
+  repeat
+    NetworkRequestControlOfEntity(entity)
+    Wait(0)
+  until NetworkHasControlOfEntity(entity) or GetGameTimer() >= deadline or not DoesEntityExist(entity)
+  return NetworkHasControlOfEntity(entity)
+end
+
 --- The local handle of an entity by net id, nil when it doesn't exist here
 local function fromNet(netId)
   if not netId or not NetworkDoesNetworkIdExist(netId) then return nil end
@@ -210,6 +222,8 @@ local function spawnTruck(current)
     return cancelRobbery("truck_failed")
   end
   current.truck, current.truckNet = truck, truckNet
+  -- the truck spawns far from the player: without its own collision it can drop through the map there
+  SetEntityLoadCollisionFlag(truck, true)
   SetVehicleOnGroundProperly(truck)
 
   local driver
@@ -266,6 +280,8 @@ local function arrive(current, truck)
   for _, netId in ipairs(current.guardNets) do
     local ped = fromNet(netId)
     if ped and not IsEntityDead(ped) then
+      requestControl(ped)
+      if robbery ~= current then return end
       guards[#guards + 1] = ped
       SetBlockingOfNonTemporaryEvents(ped, false)
       TaskLeaveVehicle(ped, truck, 0)
@@ -286,7 +302,9 @@ local function arrive(current, truck)
   if robbery ~= current then return end
   for _, ped in ipairs(guards) do
     -- they fight whoever of the player group is around (the robber may still be on the way)
-    if DoesEntityExist(ped) and not IsEntityDead(ped) then TaskCombatHatedTargetsAroundPed(ped, 100.0, 0) end
+    if DoesEntityExist(ped) and not IsEntityDead(ped) and requestControl(ped) then
+      TaskCombatHatedTargetsAroundPed(ped, 100.0, 0)
+    end
   end
   notify(locale("arrived_money"))
 end
@@ -334,7 +352,7 @@ local function runStep(current, action)
   if cut then
     current.stage = "open"
     local truck = truckEntity(current)
-    if truck then
+    if truck and requestControl(truck) then
       for _, door in ipairs(DOORS) do SetVehicleDoorOpen(truck, door, false, true) end
     end
   else
@@ -430,7 +448,8 @@ local function currentPrompt(current, pos)
   end
   if (stage == "follow" and current.arrived) or stage == "open" then
     local coords = current.truckCoords
-    if coords and #(pos - coords) <= Robbery.distance then
+    -- cutting and looting are done on foot
+    if coords and #(pos - coords) <= Robbery.distance and not IsPedInAnyVehicle(PlayerPedId(), false) then
       if stage == "follow" then return "cut", locale("prompt_cut") end
       return "loot", locale("prompt_loot")
     end
