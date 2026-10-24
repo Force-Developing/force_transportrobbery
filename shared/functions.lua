@@ -196,6 +196,7 @@ local function ApplyLegacyConfig()
   if Config.Police == nil then
     Config.Police = { jobs = { "police" }, minimum = tonumber(Config.RequiredCopsRob) or 1 }
   end
+  if not IS_SERVER then return end
   Log("warn", "config.lua is in the 1.x format: its locations, models, reward and police minimum are used, everything " ..
     "else has the 2.0 defaults. Switch to the 2.0 config.lua to change the new options.")
 end
