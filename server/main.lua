@@ -159,7 +159,9 @@ lib.callback.register(RESOURCE .. ":server:start", function(source)
   local identifier = identifierOf(source)
   if not identifier then return false, "not_ready" end
   expire()
-  if runOf(source) then return false, "busy" end
+  -- the stage lets a client that missed the answer to its start (or wait) pick the robbery up again
+  local own = runOf(source)
+  if own then return false, "busy", own.stage end
   if not isNear(source, Robbery.boss.position, GetInteractDistance()) then return false, "too_far" end
   if run then return false, "boss_busy" end
   local key = playerKey(source, identifier)
@@ -196,9 +198,13 @@ lib.callback.register(RESOURCE .. ":server:wait", function(source)
   local current = runOf(source)
   if not current then return false, "no_run" end
   if expire() then return false, "expired" end
-  if current.stage ~= "meet" then return false, "failed" end
+  if current.stage ~= "meet" and current.stage ~= "waiting" then return false, "failed" end
   local ambush = Robbery.ambush
   if not isNear(source, ambush.coords, ambush.radius) then return false, "too_far" end
+  -- asked again (the first answer reached the client too late): the wait goes on, it doesn't start over
+  if current.stage == "waiting" then
+    return true, math.max(0, ambush.wait - (GetGameTimer() - current.waitStarted))
+  end
   current.stage = "waiting"
   current.waitStarted = GetGameTimer()
   current.stageDeadline = current.waitStarted + ambush.wait + SPAWN_GRACE_MS

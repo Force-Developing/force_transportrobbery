@@ -510,6 +510,22 @@ end
 -- Boss
 -------------------------------------------------------------------------------------------------------------------
 
+--- The server holds a robbery of this player that this client doesn't know (the answer to the start came after the
+--- client stopped waiting for it): pick it up when it's still at the first step, otherwise offer to call it off.
+local function resumeRobbery(stage)
+  if stage == "meet" then return beginRobbery() end
+  local answer = lib.alertDialog({
+    header = locale("not_finished_header", Robbery.boss.name),
+    content = locale("not_finished_content"),
+    centered = true,
+    cancel = true,
+  })
+  if answer == "confirm" and not robbery then
+    TriggerServerEvent(RESOURCE .. ":server:cancel")
+    notify(locale("cancelled"))
+  end
+end
+
 local function confirmStart()
   local reward = Robbery.reward
   local answer = lib.alertDialog({
@@ -522,7 +538,10 @@ local function confirmStart()
   if robbery then return notify(locale("busy"), "error") end
   local ok, reason, extra = awaitServer(RESOURCE .. ":server:start")
   if ok == nil then return notify(locale("server_no_response"), "error") end
-  if not ok then return notifyReason(reason, extra) end
+  if not ok then
+    if reason == "busy" and type(extra) == "string" and not robbery then return resumeRobbery(extra) end
+    return notifyReason(reason, extra)
+  end
   beginRobbery()
 end
 
