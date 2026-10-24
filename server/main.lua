@@ -360,11 +360,25 @@ local function checkCharacter()
   TriggerClientEvent(RESOURCE .. ":client:ended", current.source, "character")
 end
 
+--- A cut or loot only counts while the player stays at the truck: walking away (or cancelling the progress bar and
+--- leaving) stops its timer, the step has to be started again.
+local function checkBegun()
+  local current = run
+  if not current or not current.begun or current.finishing then return end
+  local truck = current.truck
+  if truck and DoesEntityExist(truck) and isNear(current.source, GetEntityCoords(truck), Robbery.distance) then return end
+  current.begun = nil
+  Debug("info", "%s left the truck during the %s", tostring(GetPlayerName(current.source)), current.stage == "open" and "loot" or "cut")
+end
+
 -- Ends a robbery that ran past Config.MaxDuration or whose character is gone
 CreateThread(function()
   while true do
     Wait(5000)
-    if not expire() then checkCharacter() end
+    if not expire() then
+      checkCharacter()
+      checkBegun()
+    end
   end
 end)
 
