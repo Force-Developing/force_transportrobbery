@@ -151,6 +151,55 @@ local function PrepareReward()
   return { min = low, max = high, account = account }
 end
 
+--- A config.lua kept from 1.x (Config.PedPos, Config.MainPoint, Config.MainCarPoint, Config.MoneyReward, ...) is mapped
+--- onto the 2.0 keys, so its locations, models, reward and police minimum keep working. Everything 1.x didn't have
+--- gets the 2.0 default.
+local function ApplyLegacyConfig()
+  if Config.Framework == nil then Config.Framework = "auto" end
+  if Config.Target == nil then Config.Target = "auto" end
+  if Config.Boss ~= nil or Config.Ambush ~= nil or Config.Truck ~= nil then return end
+  if Config.PedPos == nil and Config.MainPoint == nil and Config.MainCarPoint == nil then return end
+
+  local function first(list)
+    if type(list) ~= "table" then return nil end
+    if isVector(list) then return list end
+    return type(list[1]) == "table" and isVector(list[1]) and list[1] or nil
+  end
+
+  if isVector(Config.PedPos) then
+    local p = Config.PedPos
+    Config.Boss = {
+      model = type(Config.PedHash) == "string" and Config.PedHash or nil,
+      coords = vector4(p.x + 0.0, p.y + 0.0, p.z + 0.0, (tonumber(Config.PedPosH) or 0.0) + 0.0),
+    }
+  end
+  local point = first(Config.MainPoint)
+  if point then Config.Ambush = { coords = toVector3(point) } end
+  local car = first(Config.MainCarPoint)
+  if car and isVector(Config.VehicleDestination) then
+    -- 1.x put VehiclePedHash2 behind the wheel and VehiclePedHash next to it
+    local guards = {}
+    if type(Config.VehiclePedHash2) == "string" then guards[#guards + 1] = { model = Config.VehiclePedHash2, seat = -1 } end
+    if type(Config.VehiclePedHash) == "string" then guards[#guards + 1] = { model = Config.VehiclePedHash, seat = 0 } end
+    Config.Truck = {
+      model = type(car.vehicleHash) == "string" and car.vehicleHash:lower() or "stockade",
+      coords = vector4(car.x + 0.0, car.y + 0.0, car.z + 0.0, (tonumber(car.h) or 0.0) + 0.0),
+      destination = toVector3(Config.VehicleDestination),
+      guards = guards,
+      weapon = "WEAPON_SMG",
+      armour = 100,
+    }
+  end
+  if Config.MoneyReward ~= nil or Config.MoneyRewardMin ~= nil then
+    Config.Reward = { min = Config.MoneyRewardMin, max = Config.MoneyReward, account = "cash" }
+  end
+  if Config.Police == nil then
+    Config.Police = { jobs = { "police" }, minimum = tonumber(Config.RequiredCopsRob) or 1 }
+  end
+  Log("warn", "config.lua is in the 1.x format: its locations, models, reward and police minimum are used, everything " ..
+    "else has the 2.0 defaults. Switch to the 2.0 config.lua to change the new options.")
+end
+
 local function PrepareConfig()
   local robbery = type(Config.Robbery) == "table" and Config.Robbery or {}
   Robbery = {
@@ -440,5 +489,6 @@ else
 end
 
 InitLocale()
+ApplyLegacyConfig()
 PrepareConfig()
 RunSafe("Environment initialization", IS_SERVER and InitServer or InitClient)
