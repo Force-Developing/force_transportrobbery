@@ -12,10 +12,17 @@ local GUARD_RADIUS = 15.0
 local DRIVE_SPEED_FACTOR = 1.5
 -- How long after the wait at the ambush is over the client may take to spawn and report the truck
 local SPAWN_GRACE_MS = 120000
+-- Meters on top of what the truck can drive between two position samples (network sync, physics)
+local TRUCK_JUMP_SLACK = 50.0
+-- A sample where the truck didn't move is no proof of anything (stopped, or its position isn't synced for a moment), so
+-- it doesn't reset the time of the last accepted position; but at most this much time counts toward the next sample:
+-- a truck parked at its spawn can't jump to the destination afterwards.
+local TRUCK_STILL_MOVED = 1.0
+local TRUCK_MAX_GAP_MS = 20000
 
 -- The one robbery that can run at a time (a single truck on a single route):
--- { source, identifier, player, stage, startedAt, deadline, stageDeadline, waitStarted, spawnedAt, truck, guards, begun,
---   alerted, finishing }
+-- { source, identifier, player, stage, startedAt, deadline, stageDeadline, waitStarted, spawnedAt, truck, track, guards,
+--   begun, alerted, finishing }
 -- stage: "meet" (go to the ambush) -> "waiting" -> "follow" (truck out) -> "open" (doors cut) -> paid
 local run = nil
 local cooldownUntil = 0
@@ -264,8 +271,32 @@ lib.callback.register(RESOURCE .. ":server:spawned", function(source, truckNet, 
   current.stage = "follow"
   current.spawnedAt = GetGameTimer()
   current.stageDeadline = nil
+  current.track = { coords = truckCoords, at = current.spawnedAt }
   return true
 end)
+
+--- Compares the truck's position with the last accepted one: false (and the robbery ended) when it moved farther than
+--- it can drive in the time between, i.e. a modified client teleported it. A truck that doesn't exist here for a
+--- moment, isn't synced or didn't move is skipped; the next sample is compared over the time since the last accepted
+--- one (up to TRUCK_MAX_GAP_MS).
+local function trackTruck(current)
+  local track, truck = current.track, current.truck
+  if not track or not truck or not DoesEntityExist(truck) then return true end
+  local coords = GetEntityCoords(truck)
+  if #coords < 1.0 then return true end
+  local now = GetGameTimer()
+  local moved = #(coords - track.coords)
+  if moved < TRUCK_STILL_MOVED then return true end
+  local gap = math.min(now - track.at, TRUCK_MAX_GAP_MS)
+  if moved > Robbery.truck.speed * DRIVE_SPEED_FACTOR * gap / 1000 + TRUCK_JUMP_SLACK then
+    Log("warn", ("The truck of %s moved %d m in %.1f s, faster than it can drive: robbery ended"):format(
+      tostring(GetPlayerName(current.source)), math.floor(moved), (now - track.at) / 1000))
+    endRun(current, "truck moved faster than it can drive")
+    return false
+  end
+  track.coords, track.at = coords, now
+  return true
+end
 
 --- The truck must exist and stand at its destination, and the player next to it
 --- @return boolean ok, string|nil reason
@@ -275,6 +306,7 @@ local function checkTruck(source, current, arriving)
     endRun(current, "truck gone")
     return false, "truck_lost"
   end
+  if not trackTruck(current) then return false, "truck_lost" end
   local def = Robbery.truck
   local coords = GetEntityCoords(truck)
   if #(coords - def.destination) > def.arriveRadius + DISTANCE_MARGIN then return false, "not_arrived" end
@@ -411,6 +443,10 @@ CreateThread(function()
     Wait(5000)
     if not expire() then
       checkCharacter()
+      local current = run
+      if current and not current.finishing and not trackTruck(current) then
+        TriggerClientEvent(RESOURCE .. ":client:ended", current.source, "truck")
+      end
       checkBegun()
     end
   end

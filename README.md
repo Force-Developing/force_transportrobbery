@@ -7,7 +7,7 @@ Free and open source. Works on ESX Legacy, QBCore and QBox.
 ## Features
 
 - The 1.x robbery: Berto, the ambush spot, the Stockade with two guards, the drive, the guards fighting at the destination, cutting the doors and taking the money
-- Server-side checks: the steps in order, the player's position at every step, the truck's model, owner, spawn point and destination, the guards' models and owner, the minimum drive time, the cut and loot durations, the police minimum, one robbery at a time and a cooldown
+- Server-side checks: the steps in order, the player's position at every step, the truck's model, owner, spawn point and destination, the guards' models and owner, the minimum drive time and the truck's speed during the drive, the cut and loot durations, the police minimum, one robbery at a time and a cooldown
 - The reward (a random amount between a min and a max) is paid once by the server
 - Payout as cash, bank or dirty money (ESX black_money, QBox / ox_inventory black_money item, QBCore markedbills)
 - Police alarm with a map blip for the police on duty, and a server event for your dispatch resource
