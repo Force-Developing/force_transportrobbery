@@ -1,5 +1,5 @@
 local latestVersionUrl =
-"https://gist.githubusercontent.com/Force-Developing/GIST_ID/raw/force_transportrobbery"
+"https://gist.githubusercontent.com/Force-Developing/ebd8a58f4043ab64e9649f72b27017db/raw/force_transportrobbery"
 local currentVersion = GetResourceMetadata(GetCurrentResourceName(), 'version', 0)
 
 local function parseVersion(version)
