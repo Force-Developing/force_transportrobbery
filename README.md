@@ -40,6 +40,15 @@ A `config.lua` kept from 1.x still works (its locations, models, reward and poli
 
 https://docs.forcedevelopments.com/free-resources/force_transportrobbery/introduction
 
+## More from Force Developments
+
+Paid resources that pair well with this one. Escrow-protected, documented, with free updates:
+
+- **[Force Burglary](https://forcedevelopments.com/scripts/force-burglary?utm_source=github&utm_medium=readme&utm_campaign=force_transportrobbery)**: house robbery system with XP progression.
+- **[Force Blackmarket](https://forcedevelopments.com/scripts/force-blackmarket?utm_source=github&utm_medium=readme&utm_campaign=force_transportrobbery)**: black market with player-to-player trading.
+
+Want all of them? [All Resources](https://forcedevelopments.com/scripts/all-resources-1-month?utm_source=github&utm_medium=readme&utm_campaign=force_transportrobbery) is a monthly subscription that includes every paid resource. Browse the full catalogue at [forcedevelopments.com](https://forcedevelopments.com/scripts?utm_source=github&utm_medium=readme&utm_campaign=force_transportrobbery).
+
 ## License
 
 Apache 2.0, see [LICENSE](LICENSE).
